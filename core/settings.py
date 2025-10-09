@@ -8,9 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-secret-key')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# Permite qualquer domínio do Render (produção)
+ALLOWED_HOSTS = ['.onrender.com']
 
 # Aplicações instaladas
 INSTALLED_APPS = [
@@ -29,10 +30,12 @@ INSTALLED_APPS = [
     'movies',
 ]
 
+# Middlewares
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # precisa vir antes de CommonMiddleware
-    'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # antes do CommonMiddleware
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # serve arquivos estáticos
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -60,7 +63,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Banco de dados padrão (sqlite3)
+# Banco de dados (SQLite para testes, Render recomenda PostgreSQL em produção)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -68,7 +71,7 @@ DATABASES = {
     }
 }
 
-# Cache simples (memória)
+# Cache
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -84,8 +87,10 @@ USE_TZ = True
 
 # Arquivos estáticos
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Configuração do DRF (básica)
+# DRF
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -95,10 +100,10 @@ REST_FRAMEWORK = {
     ]
 }
 
-# CORS - liberar para o front (React)
+# CORS - liberar para front
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite
-    
+    "http://localhost:5173",  # Vite dev
+    "https://heroes-flix-frontend.vercel.app",  # produção Vercel
 ]
 
 # TMDB API Key
