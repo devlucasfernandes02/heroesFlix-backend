@@ -13,8 +13,10 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 # Permite qualquer domínio do Render (produção)
 ALLOWED_HOSTS = ['.onrender.com']
 
+INSTALLED_APPS = []
+
 # Aplicações instaladas
-INSTALLED_APPS = [
+INSTALLED_APPS += [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -28,7 +30,13 @@ INSTALLED_APPS = [
 
     # App local
     'movies',
+
+    # Usuarios
+    'users',
 ]
+
+
+MIDDLEWARE = []
 
 # Middlewares
 MIDDLEWARE = [
@@ -108,3 +116,6 @@ CORS_ALLOWED_ORIGINS = [
 
 # TMDB API Key
 TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+
+# Verificar Credenciais
+CORS_ALLOW_CREDENTIALS = True
