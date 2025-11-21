@@ -2,7 +2,6 @@ import requests
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from django.core.cache import cache
 
 TMDB_BASE = 'https://api.themoviedb.org/3'
 
@@ -19,119 +18,91 @@ def tmdb_get(path, params=None):
     return resp.json()
 
 
-# --------------------------
-# Filmes e séries de heróis
-# --------------------------
+# ----------------- Lista de Filmes e Séries -----------------
 
 @api_view(['GET'])
 def filmes_herois(request):
-    """Lista de filmes de Heróis"""
     page = request.GET.get('page', 1)
-    cache_key = f"tmdb_hero_movies_page_{page}"
-    data = cache.get(cache_key)
-    if not data:
-        # Palavras-chave usadas separadamente para garantir que o TMDB encontre
-        data_marvel = tmdb_get('/discover/movie', params={
-            'with_genres': '28,12,878',  # Ação, Aventura, Ficção Científica
-            'with_keywords': 15695,       # Marvel
-            'sort_by': 'popularity.desc',
-            'page': page
-        })
-        data_dc = tmdb_get('/discover/movie', params={
-            'with_genres': '28,12,878',
-            'with_keywords': 9717,        # DC
-            'sort_by': 'popularity.desc',
-            'page': page
-        })
-        data_hero = tmdb_get('/discover/movie', params={
-            'with_genres': '28,12,878',
-            'with_keywords': 9715,        # Super-Hero
-            'sort_by': 'popularity.desc',
-            'page': page
-        })
-
-        # Combina os resultados e remove duplicados
-        results = {f['id']: f for f in (data_marvel.get('results', []) +
-                                        data_dc.get('results', []) +
-                                        data_hero.get('results', []))}
-        data = {'results': list(results.values())}
-        cache.set(cache_key, data, timeout=60*60)
+    data = tmdb_get('/discover/movie', params={
+        'with_genres': '28,12,878',  # Ação, Aventura, Ficção Científica
+        'with_keywords': 9715,       # Super-Hero
+        'sort_by': 'popularity.desc',
+        'page': page
+    })
     return Response(data)
 
 
 @api_view(['GET'])
 def series_herois(request):
-    """Lista de séries de Heróis"""
     page = request.GET.get('page', 1)
-    cache_key = f"tmdb_hero_series_page_{page}"
-    data = cache.get(cache_key)
-    if not data:
-        data_marvel = tmdb_get('/discover/tv', params={
-            'with_genres': '10759,10765',  # Ação + Ficção/Fantasia
-            'with_keywords': 15695,        # Marvel
-            'sort_by': 'popularity.desc',
-            'page': page
-        })
-        data_dc = tmdb_get('/discover/tv', params={
-            'with_genres': '10759,10765',
-            'with_keywords': 9717,         # DC
-            'sort_by': 'popularity.desc',
-            'page': page
-        })
-        data_hero = tmdb_get('/discover/tv', params={
-            'with_genres': '10759,10765',
-            'with_keywords': 9715,         # Super-Hero
-            'sort_by': 'popularity.desc',
-            'page': page
-        })
-
-        # Combina resultados e remove duplicados
-        results = {f['id']: f for f in (data_marvel.get('results', []) +
-                                        data_dc.get('results', []) +
-                                        data_hero.get('results', []))}
-        data = {'results': list(results.values())}
-        cache.set(cache_key, data, timeout=60*60)
+    data = tmdb_get('/discover/tv', params={
+        'with_genres': '10759,10765',  # Ação + Ficção/Fantasia
+        'with_keywords': 9715,
+        'sort_by': 'popularity.desc',
+        'page': page
+    })
     return Response(data)
 
 
 @api_view(['GET'])
 def filmes_marvel(request):
-    """Filmes da Marvel Studios"""
-    cache_key = "tmdb_marvel_movies"
-    data = cache.get(cache_key)
-    if not data:
-        data = tmdb_get('/discover/movie', params={
-            'with_companies': '420',  # Marvel Studios
-            'sort_by': 'popularity.desc',
-            'page': request.GET.get('page', 1)
-        })
-        cache.set(cache_key, data, timeout=60*60)
+    page = request.GET.get('page', 1)
+    data = tmdb_get('/discover/movie', params={
+        'with_companies': '420',
+        'sort_by': 'popularity.desc',
+        'page': page
+    })
     return Response(data)
 
 
 @api_view(['GET'])
 def filmes_dc(request):
-    cache_key = "tmdb_dc_movies"
-    data = cache.get(cache_key)
-    if not data:
-        data = tmdb_get('/discover/movie', params={
-            'with_keywords': '9717',  # DC Comics
-            'sort_by': 'popularity.desc',
-            'page': request.GET.get('page', 1)
-        })
-        cache.set(cache_key, data, timeout=60*60)
+    page = request.GET.get('page', 1)
+    data = tmdb_get('/discover/movie', params={
+        'with_keywords': 9717,
+        'sort_by': 'popularity.desc',
+        'page': page
+    })
     return Response(data)
 
 
 @api_view(['GET'])
 def herois_alternativos(request):
-    cache_key = "tmdb_alt_heroes"
-    data = cache.get(cache_key)
-    if not data:
-        data = tmdb_get('/discover/movie', params={
-            'with_keywords': '9715',  # Super-heróis alternativos
-            'sort_by': 'popularity.desc',
-            'page': request.GET.get('page', 1)
-        })
-        cache.set(cache_key, data, timeout=60*60)
+    page = request.GET.get('page', 1)
+    data = tmdb_get('/discover/movie', params={
+        'with_keywords': 9715,
+        'sort_by': 'popularity.desc',
+        'page': page
+    })
     return Response(data)
+
+
+# ----------------- Detalhes do Item -----------------
+
+@api_view(['GET'])
+def detalhe_item(request, tipo, id):
+    """
+    Retorna detalhes de um item pelo tipo (filmes ou series) e ID.
+    """
+    try:
+        if tipo == "filmes":
+            data = tmdb_get(f"/movie/{id}")
+        elif tipo == "series":
+            data = tmdb_get(f"/tv/{id}")
+        else:
+            return Response({"error": "Tipo inválido"}, status=400)
+
+        # Mapeia os campos para o frontend
+        item = {
+            "id": data["id"],
+            "titulo": data.get("title") or data.get("name"),
+            "descricao": data.get("overview"),
+            "capa": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else None,
+            "banner": f"https://image.tmdb.org/t/p/original{data.get('backdrop_path')}" if data.get('backdrop_path') else None,
+            "genero": ", ".join([g["name"] for g in data.get("genres", [])]),
+            "ano": (data.get("release_date") or data.get("first_air_date") or "")[:4]
+        }
+
+        return Response(item)
+    except Exception as e:
+        return Response({"error": str(e)}, status=404)

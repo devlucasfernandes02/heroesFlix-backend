@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-secret-key')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # Permite qualquer domínio do Render (produção)
-ALLOWED_HOSTS = ['.onrender.com']
+ALLOWED_HOSTS = ["*"]
 
 # Custom model do usuer
 # AUTH_USER_MODEL = 'users.User'
