@@ -13,6 +13,9 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 # Permite qualquer domínio do Render (produção)
 ALLOWED_HOSTS = ['.onrender.com']
 
+# Custom model do usuer
+# AUTH_USER_MODEL = 'users.User'
+
 INSTALLED_APPS = []
 
 # Aplicações instaladas
@@ -102,9 +105,11 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
+       # 'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
+       # 'rest_framework.permissions.IsAuthenticated',
     ]
 }
 
@@ -119,3 +124,12 @@ TMDB_API_KEY = os.getenv('TMDB_API_KEY')
 
 # Verificar Credenciais
 CORS_ALLOW_CREDENTIALS = True
+
+# Token
+# from datetime import timedelta
+
+# SIMPLE_JWT = {
+   # 'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+   # 'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+   # 'AUTH_HEADER_TYPES': ('Bearer',),
+# }

@@ -1,67 +1,64 @@
-from django.shortcuts import render
-from django.contrib.auth import authenticate, login, logout, get_user_model
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.http import Http404
+from .models import User
 
-User = get_user_model()
+def home(request):
+    return render(request, 'users/home.html')
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@csrf_exempt  # só para desenvolvimento rápido; veja observações abaixo
-def login_view(request):
-    """
-    POST { "email": "...", "password": "..." }
-    """
-    data = request.data
-    email = data.get('email')
-    password = data.get('password')
+def user(request):
+    if request.method == "POST":
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+
+        # validações mínimas
+        if not email or not password:
+            messages.error(request, "Email e senha são obrigatórios.")
+            return redirect('login_user')
+
+        # verifica duplicação antes de criar
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Usuário já cadastrado. Faça login.")
+            return redirect('login_user')
+
+        # cria usuário (simples, sem hashing)
+        User.objects.create(name=name, email=email, password=password)
+        messages.success(request, "Usuário cadastrado com sucesso! Faça login.")
+        return redirect('login_user')
+
+    # GET -> listar
+    users = User.objects.all()
+    return render(request, 'users/users.html', {'users': users})
+
+
+# Login: valida email+senha e redireciona
+def login_create(request):
+    if request.method != "POST":
+        raise Http404()
+
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '')
 
     if not email or not password:
-        return Response({'detail': 'Email e senha são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
+        messages.error(request, "Preencha email e senha.")
+        return redirect('login_user')
 
     try:
-        user = User.objects.get(email__iexact=email)
+        user = User.objects.get(email=email)
     except User.DoesNotExist:
-        return Response({'detail': 'Credenciais inválidas.'}, status=status.HTTP_401_UNAUTHORIZED)
+        messages.error(request, "Usuário ou senha incorreta.")
+        return redirect('login_user')
 
-    # o authenticate espera username, então usamos username do user
-    user_auth = authenticate(request, username=user.username, password=password)
-    if user_auth is None:
-        return Response({'detail': 'Credenciais inválidas.'}, status=status.HTTP_401_UNAUTHORIZED)
+    if user.password != password:
+        messages.error(request, "Usuário ou senha incorreta.")
+        return redirect('login_user')
 
-    # cria a sessão
-    login(request, user_auth)
-
-    # retorna dados do usuário (sem senha)
-    user_data = {
-        'id': user_auth.id,
-        'username': user_auth.username,
-        'email': user_auth.email,
-        'first_name': user_auth.first_name,
-        'last_name': user_auth.last_name,
-    }
-    return Response({'access': True, 'user': user_data}, status=status.HTTP_200_OK)
+    request.session['user_email'] = user.email
+    messages.success(request, "Login realizado com sucesso!")
+    return redirect('list_users')
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def logout_view(request):
-    logout(request)
-    return Response({'detail': 'Logout ok'}, status=status.HTTP_200_OK)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def whoami(request):
-    user = request.user
-    return Response({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-    })
+# Template de login
+def login_user(request):
+    return render(request, 'users/login.html')
