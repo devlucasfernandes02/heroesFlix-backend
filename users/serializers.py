@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import User
+from .models import Profile, User
 from django.contrib.auth.password_validation import validate_password
+import random
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -28,3 +29,32 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
         return user
+    
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ('id', 'user', 'name', 'avatar_url')
+        read_only_fields = ('id', 'avatar_url',)
+        
+    # Limita a 5 perfis)
+    def validate(self, data):
+        user = data.get('user')
+        
+        
+        if Profile.objects.filter(user=user).count() >= 5:
+            raise serializers.ValidationError({"limite": "Você já atingiu o limite de 5 perfis para esta conta."})
+            
+        return data
+
+    # (Gera a string do ícone)
+    def create(self, validated_data):
+        
+        profile_name = validated_data.get('name', 'P') 
+        initial = profile_name[0].upper() 
+        random_letter = random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        
+        
+        validated_data['avatar_url'] = initial + random_letter 
+        
+       
+        return super().create(validated_data)

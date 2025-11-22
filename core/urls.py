@@ -1,3 +1,4 @@
+from rest_framework import serializers
 from django.contrib import admin
 from django.urls import path, include
 from users import views
@@ -7,10 +8,13 @@ def home(request):
     return JsonResponse({"status": "OK", "service": "HeroesFlix API running"})
 
 urlpatterns = [
-    path("", home),  
+    path("", home),
     path('admin/', admin.site.urls),
     path('api/', include('movies.urls')),
     path('users/', views.users),
     path('login/', views.login_user),
     path('login/create/', views.login_create),
+    path('users/<int:user_id>/profiles', views.profiles),
+    path('users/<int:user_id>/profiles/<int:profile_id>', views.profile_detail),
+    
 ]
