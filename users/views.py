@@ -1,64 +1,106 @@
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.http import Http404
+import json
+from django.http import JsonResponse, Http404
+from django.views.decorators.csrf import csrf_exempt
 from .models import User
 
+
 def home(request):
-    return render(request, 'users/home.html')
+    return JsonResponse({
+        "status": "OK",
+        "service": "HeroesFlix API running",
+        "endpoints": {
+            "/users/": "GET lista usuários | POST cria usuário",
+            "/login/": "Info da rota de login",
+            "/login/create/": "POST valida login"
+        }
+    })
 
-def user(request):
+
+@csrf_exempt
+def users(request):
+
     if request.method == "POST":
-        name = request.POST.get('name', '').strip()
-        email = request.POST.get('email', '').strip()
-        password = request.POST.get('password', '')
+        try:
+            data = json.loads(request.body)
+        except:
+            return JsonResponse({"error": "JSON inválido"}, status=400)
 
-        # validações mínimas
-        if not email or not password:
-            messages.error(request, "Email e senha são obrigatórios.")
-            return redirect('login_user')
+        name = data.get("name", "").strip()
+        email = data.get("email", "").strip()
+        password = data.get("password", "")
+        confirm = data.get("confirm_password", "")
 
-        # verifica duplicação antes de criar
+        # validações
+        if not email:
+            return JsonResponse({"error": "Email é obrigatório."}, status=400)
+
+        if not password:
+            return JsonResponse({"error": "Senha é obrigatória."}, status=400)
+
+        if len(password) < 6:
+            return JsonResponse({"error": "A senha deve ter no mínimo 6 caracteres."}, status=400)
+
+        if password != confirm:
+            return JsonResponse({"error": "As senhas não coincidem."}, status=400)
+
         if User.objects.filter(email=email).exists():
-            messages.error(request, "Usuário já cadastrado. Faça login.")
-            return redirect('login_user')
+            return JsonResponse({"error": "Usuário já cadastrado."}, status=409)
 
-        # cria usuário (simples, sem hashing)
-        User.objects.create(name=name, email=email, password=password)
-        messages.success(request, "Usuário cadastrado com sucesso! Faça login.")
-        return redirect('login_user')
+        user = User.objects.create(name=name, email=email, password=password)
 
-    # GET -> listar
-    users = User.objects.all()
-    return render(request, 'users/users.html', {'users': users})
+        return JsonResponse({
+            "message": "Usuário criado",
+            "user": {
+                "id": user.id_users,
+                "name": user.name,
+                "email": user.email
+            }
+        }, status=201)
+
+    lista = list(User.objects.values("id_users", "name", "email"))
+    return JsonResponse(lista, safe=False)
 
 
-# Login: valida email+senha e redireciona
+
+def login_user(request):
+    return JsonResponse({
+        "message": "Use POST em /login/create/",
+        # "example": {
+        #     "email": "email@exemplo.com",
+        #     "password": "123"
+        # }
+    })
+
+
+@csrf_exempt
 def login_create(request):
     if request.method != "POST":
         raise Http404()
 
-    email = request.POST.get('email', '').strip()
-    password = request.POST.get('password', '')
+    try:
+        data = json.loads(request.body)
+    except:
+        return JsonResponse({"error": "JSON inválido"}, status=400)
+
+    email = data.get("email", "").strip()
+    password = data.get("password", "")
 
     if not email or not password:
-        messages.error(request, "Preencha email e senha.")
-        return redirect('login_user')
+        return JsonResponse({"error": "Preencha email e senha."}, status=400)
 
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
-        messages.error(request, "Usuário ou senha incorreta.")
-        return redirect('login_user')
+        return JsonResponse({"error": "Usuário ou senha incorreta."}, status=401)
 
     if user.password != password:
-        messages.error(request, "Usuário ou senha incorreta.")
-        return redirect('login_user')
+        return JsonResponse({"error": "Usuário ou senha incorreta."}, status=401)
 
-    request.session['user_email'] = user.email
-    messages.success(request, "Login realizado com sucesso!")
-    return redirect('list_users')
-
-
-# Template de login
-def login_user(request):
-    return render(request, 'users/login.html')
+    return JsonResponse({
+        "message": "Login OK",
+        "user": {
+            "id": user.id_users,
+            "name": user.name,
+            "email": user.email
+        }
+    })
