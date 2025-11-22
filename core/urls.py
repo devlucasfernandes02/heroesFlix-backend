@@ -7,10 +7,10 @@ def home(request):
     return JsonResponse({"status": "OK", "service": "HeroesFlix API running"})
 
 urlpatterns = [
-    path("", home),  # <--- adicionada
+    path("", home),  
     path('admin/', admin.site.urls),
-    path('api/', include('movies.urls')), 
-    path('users/', views.user, name='list_users'),       
-    path('login/', views.login_user, name='login_user'),
-    path('login/create/', views.login_create, name='login_create'),
+    path('api/', include('movies.urls')),
+    path('users/', views.users),
+    path('login/', views.login_user),
+    path('login/create/', views.login_create),
 ]
